@@ -1,37 +1,35 @@
 
-# Función Lambda para Tokens de Claroshop API
+# ClaroShop Token Lambda Function
 
-Esta función Lambda automatiza la obtención y almacenamiento de tokens de autenticación para la API de Claroshop.
+Lambda function that obtains and stores authentication tokens for ClaroShop's API integration.
 
-## Descripción
+## Description
 
-La función realiza las siguientes operaciones:
-1. Obtiene credenciales (Client ID y Client Secret) desde variables de entorno
-2. Solicita tokens de autenticación a Claroshop
-3. Almacena los tokens en AWS Parameter Store de forma segura
+This function automates the process of:
+1. Authenticating with ClaroShop's API
+2. Obtaining access and refresh tokens
+3. Storing tokens securely in AWS Parameter Store
 
-## Requisitos Previos
+## Requirements
 
-- Cuenta AWS con acceso a:
+- AWS Account with access to:
   - AWS Lambda
-  - AWS Parameter Store
-- Credenciales de Claroshop API:
-  - Client ID
-  - Client Secret
+  - AWS Systems Manager Parameter Store
+- ClaroShop API Credentials:
+  - Username
+  - Password
 
-## Configuración
+## Configuration
 
-### Variables de Entorno
+### Environment Variables
 
-La función requiere las siguientes variables de entorno:
+The function requires these environment variables:
+- `CLAROSHOP_USERNAME`: Your ClaroShop API username
+- `CLAROSHOP_PASSWORD`: Your ClaroShop API password
 
-- `CLIENT_ID`: ID de cliente de la aplicación Claroshop
-- `CLIENT_SECRET`: Secreto del cliente de la aplicación Claroshop
+### IAM Permissions
 
-### Permisos IAM
-
-La función necesita los siguientes permisos IAM:
-
+The Lambda function's role needs these permissions:
 ```json
 {
     "Version": "2012-10-17",
@@ -39,68 +37,66 @@ La función necesita los siguientes permisos IAM:
         {
             "Effect": "Allow",
             "Action": [
-                "ssm:PutParameter"
+                "ssm:PutParameter",
+                "ssm:GetParameter",
+                "ssm:DeleteParameter"
             ],
-            "Resource": [
-                "arn:aws:ssm:*:*:parameter/claroshop/*"
-            ]
+            "Resource": "arn:aws:ssm:us-east-1:800444307139:parameter/claroshop/*"
         }
     ]
 }
-```
 
-## Despliegue
-
-1. Instalar dependencias:
+## Deployment
+1. Install dependencies:
 ```bash
 pip install requests boto3 -t .
-```
+ ```
 
-2. Crear el archivo ZIP para despliegue:
+2. Create deployment package:
 ```bash
 zip -r function.zip .
-```
+ ```
 
-3. Subir el archivo ZIP a AWS Lambda
+3. Upload to AWS Lambda
+## Stored Parameters
+The function stores these parameters in AWS Parameter Store:
 
-## Uso
-
-La función se puede invocar manualmente o programar con un EventBridge (CloudWatch Events).
-
-### Parámetros Almacenados
-
-Los tokens se almacenan en Parameter Store en las siguientes rutas:
-- Access Token: `/claroshop/access-token`
-- Refresh Token: `/claroshop/refresh-token`
-
-## Respuesta de la Función
-
-### Éxito
+- /claroshop/access_token
+- /claroshop/refresh_token
+- /claroshop/expires_in
+- /claroshop/refresh_expires_in
+- /claroshop/token_type
+- /claroshop/scope
+- /claroshop/session_state
+- /claroshop/not-before-policy
+## Response Format
+### Success
 ```json
 {
     "statusCode": 200,
-    "body": {"message": "Tokens successfully updated"}
+    "body": {
+        "message": "ClaroShop tokens successfully obtained and stored",
+        "expires_in": 300,
+        "token_type": "Bearer",
+        "scope": "..."
+    }
 }
+ ```
 ```
 
 ### Error
 ```json
 {
     "statusCode": 500,
-    "body": {"error": "Error message"}
+    "body": {
+        "error": "Error message"
+    }
 }
-```
+ ```
 
-## Mantenimiento
+## Monitoring
+Monitor the function using CloudWatch Logs for:
 
-Se recomienda configurar alertas de CloudWatch para monitorear:
-- Errores de ejecución
-- Tiempos de ejecución
-- Fallos en la obtención de tokens
-```
-
-Los principales cambios realizados fueron:
-1. Cambio de nombre y referencias de Amazon Selling Partner API a Claroshop API
-2. Actualización de las rutas de Parameter Store de `/sp-api/` a `/claroshop/`
-3. Actualización de las referencias a las credenciales para reflejar Claroshop en lugar de SP-API
-4. Mantenimiento de la estructura general del documento pero con el contexto correcto
+- Authentication failures
+- Token storage issues
+- General execution errors
